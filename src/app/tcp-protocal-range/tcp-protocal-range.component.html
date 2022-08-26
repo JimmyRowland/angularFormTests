@@ -1,0 +1,32 @@
+<p>tcp-protocal-range works!</p>
+
+<input
+  name="sctp-portrange"
+  [(ngModel)]="form['sctp-portrange']"
+  [hidden]="true"
+  ngModel
+/>
+<input
+  name="tcp-portrange"
+  [(ngModel)]="form['tcp-portrange']"
+  [hidden]="true"
+  ngModel
+/>
+<input
+  name="udp-portrange"
+  [(ngModel)]="form['udp-portrange']"
+  [hidden]="true"
+  ngModel
+/>
+<form #portForm="ngForm">
+  <div *ngFor="let range of portRanges; let i = index;">
+    <select name="protocol{{i}}" [(ngModel)]="range.protocol" >
+      <option *ngFor="let protocol of protocolOptions" [ngValue]="protocol">{{protocol}}</option>
+    </select>
+    <input required type="number" min="0" max="255" name="destLow{{i}}" [(ngModel)]="range.destLow">
+    <input required type="number" min="0" max="255" name="destTo{{i}}" [(ngModel)]="range.destHigh">
+    <button (click)="onRemoveDestinationPort(i)">-</button>
+  </div>
+</form>
+
+<button (click)="onAddDestinationPort()">Add ports</button>
