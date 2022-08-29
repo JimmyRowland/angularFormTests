@@ -1,7 +1,7 @@
 import { AfterViewInit, Component, OnDestroy, ViewChild } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { interval, map, Subscription, tap } from 'rxjs';
-import { ProtocolService } from 'src/app/protocol.service';
+import { ProtocolService } from './protocol.service';
 type Protocol = 'TCP/UDP/SCTP' | 'ICMP' | 'IP';
 
 @Component({
