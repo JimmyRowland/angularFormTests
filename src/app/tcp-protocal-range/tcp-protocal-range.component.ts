@@ -1,5 +1,5 @@
 import { AfterViewInit, Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
-import { FormControl, FormGroup, NgForm, ControlContainer } from '@angular/forms';
+import { FormControl, FormGroup, NgForm, ControlContainer, FormBuilder, Validators, Validator } from '@angular/forms';
 import { delay, Subscriber, Subscription } from 'rxjs';
 
 type Protocol = 'TCP' | 'UDP' |  'SCTP'
@@ -18,25 +18,27 @@ export class TcpProtocalRangeComponent implements AfterViewInit, OnDestroy {
   @Input('loaded')
   set setForm(loaded: boolean | null){
     if(loaded){
-      this.portRanges.push(...this.getPortRangeArray(this.form['tcp-portrange'], 'TCP'), ...this.getPortRangeArray(this.form['udp-portrange'], 'UDP'), ...this.getPortRangeArray(this.form['sctp-portrange'], 'SCTP'))
+      const controls = [...this.getPortRangeArray(this.form['tcp-portrange'], 'TCP'), ...this.getPortRangeArray(this.form['udp-portrange'], 'UDP'), ...this.getPortRangeArray(this.form['sctp-portrange'], 'SCTP')]
+      for(const control of controls){
+        this.portRanges.push(control)
+      }
     }
   }
-
-  @ViewChild('portForm') ngForm?: NgForm;
 
   @Output() onProtocolRangesUpdate = new EventEmitter<{value: {'tcp-portrange': string, 'udp-portrange': string, 'sctp-portrange': string}, errors: any}>()
 
   sub?: Subscription;
 
-  portRanges: Array<{protocol: Protocol, destLow?: number, destHigh?: number, sourceLow?: number, sourceHigh?: number }> = []
   protocolOptions: ReadonlyArray<Protocol> = ['TCP' , 'UDP' ,  'SCTP']
   showSourcePort = false
 
-  constructor() { }
+  portRanges = this.fb.array([this.getNewDestinationPortControl()],Validators.required)
+
+  constructor(private fb: FormBuilder) { }
 
   ngAfterViewInit(): void {
-    this.sub = this.ngForm?.control.valueChanges.pipe(delay(0)).subscribe(() =>{
-        if(this.ngForm?.valid){
+    this.sub = this.portRanges?.valueChanges.pipe(delay(0)).subscribe(() =>{
+        if(this.portRanges?.valid){
           this.onProtocolRangesUpdate.emit({value: {
               'tcp-portrange': this.getPortRange('TCP'),
               'udp-portrange': this.getPortRange('UDP'),
@@ -46,20 +48,29 @@ export class TcpProtocalRangeComponent implements AfterViewInit, OnDestroy {
       }
     );
   }
+
+  getNewDestinationPortControl({protocol, destLow, destHigh, sourceLow, sourceHigh}: {protocol: Protocol, destLow?: number, destHigh?: number, sourceLow?: number, sourceHigh?: number} = {protocol: 'TCP'}){
+    return this.fb.group({protocol: new FormControl<Protocol>(protocol, [Validators.required]),
+      destLow: new FormControl<number| undefined>(destLow, [Validators.required]),
+      destHigh: new FormControl<number| undefined>(destHigh, [Validators.required]),
+      sourceLow: new FormControl<number| undefined>(sourceLow),
+      sourceHigh: new FormControl<number| undefined>(sourceHigh) })
+  }
+
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
   }
 
   onAddDestinationPort(){
-    this.portRanges.push({protocol: 'TCP'})
+    this.portRanges.push(this.getNewDestinationPortControl())
   }
 
   onRemoveDestinationPort(index: number){
-    this.portRanges.splice(index, 1)
+    this.portRanges.removeAt(index);
   }
 
   getPortRange(protocol: Protocol){
-    return this.portRanges.filter((range) => range.protocol === protocol)
+    return this.portRanges.value.filter((range) => range.protocol === protocol)
       .map(portRange => {
         const dest = `${portRange.destLow}-${portRange.destHigh}`;
         return this.showSourcePort? `${dest}:${portRange.sourceLow}-${portRange.sourceHigh}`: dest}
@@ -68,7 +79,7 @@ export class TcpProtocalRangeComponent implements AfterViewInit, OnDestroy {
 
   getPortRangeArray(range: string, protocol: Protocol){
     return range.split(' ').filter(range=> range).map(range => range.split(/[-:]/).map(port => Number(port)))
-      .map(([destLow, destHigh, sourceLow, sourceHigh])=> ({protocol, destLow, destHigh, sourceLow, sourceHigh}))
+      .map(([destLow, destHigh, sourceLow, sourceHigh])=> this.getNewDestinationPortControl({protocol, destLow, destHigh, sourceLow, sourceHigh}))
   }
 
 }

@@ -1,14 +1,14 @@
 <p>tcp-protocal-range works!</p>
-<form #portForm="ngForm">
-  <div *ngFor="let range of portRanges; let i = index;">
-    <select name="protocol{{i}}" [(ngModel)]="range.protocol" >
+<form>
+  <div *ngFor="let range of portRanges.controls; let i = index;">
+    <select [formControl]="range.controls.protocol" >
       <option *ngFor="let protocol of protocolOptions" [ngValue]="protocol">{{protocol}}</option>
     </select>
-    <input required type="number" min="0" max="65535" name="destLow{{i}}" [(ngModel)]="range.destLow">
-    <input required type="number" [min]="(range.destLow || 0) + 1" max="65536" name="destTo{{i}}" [(ngModel)]="range.destHigh">
+    <input required type="number" min="0" max="65535" [formControl]="range.controls.destLow">
+    <input required type="number" [min]="(range.controls.destLow.value || 0) + 1" [formControl]="range.controls.destHigh">
     <button (click)="onRemoveDestinationPort(i)">-</button>
   </div>
-  <p *ngIf="!portForm.valid">Invalid</p>
+  <p *ngIf="!portRanges.valid">Invalid</p>
 </form>
 
 
