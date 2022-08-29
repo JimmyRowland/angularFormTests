@@ -1,6 +1,6 @@
-import { AfterViewInit, Component, Input, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild } from '@angular/core';
 import { FormControl, FormGroup, NgForm, ControlContainer } from '@angular/forms';
-import { Subscriber, Subscription } from 'rxjs';
+import { delay, Subscriber, Subscription } from 'rxjs';
 
 type Protocol = 'TCP' | 'UDP' |  'SCTP'
 
@@ -11,14 +11,22 @@ type Protocol = 'TCP' | 'UDP' |  'SCTP'
   viewProviders: [ { provide: ControlContainer, useExisting: NgForm } ]
 })
 export class TcpProtocalRangeComponent implements AfterViewInit, OnDestroy {
+  // can remove
   @Input()
-  form!: {'tcp-portrange': string, 'udp-portrange': string, 'sctp-portrange': string}
+  form: {'tcp-portrange': string, 'udp-portrange': string, 'sctp-portrange': string} = {'tcp-portrange': '', 'udp-portrange': '', 'sctp-portrange': ''}
+
+  @Input('loaded')
+  set setForm(loaded: boolean | null){
+    if(loaded){
+      this.portRanges.push(...this.getPortRangeArray(this.form['tcp-portrange'], 'TCP'), ...this.getPortRangeArray(this.form['udp-portrange'], 'UDP'), ...this.getPortRangeArray(this.form['sctp-portrange'], 'SCTP'))
+    }
+  }
 
   @ViewChild('portForm') ngForm?: NgForm;
 
+  @Output() onProtocolRangesUpdate = new EventEmitter<{value: {'tcp-portrange': string, 'udp-portrange': string, 'sctp-portrange': string}, errors: any}>()
+
   sub?: Subscription;
-
-
 
   portRanges: Array<{protocol: Protocol, destLow?: number, destHigh?: number, sourceLow?: number, sourceHigh?: number }> = []
   protocolOptions: ReadonlyArray<Protocol> = ['TCP' , 'UDP' ,  'SCTP']
@@ -27,11 +35,13 @@ export class TcpProtocalRangeComponent implements AfterViewInit, OnDestroy {
   constructor() { }
 
   ngAfterViewInit(): void {
-    this.sub = this.ngForm?.control.valueChanges.subscribe(() =>{
+    this.sub = this.ngForm?.control.valueChanges.pipe(delay(0)).subscribe(() =>{
         if(this.ngForm?.valid){
-          this.form['tcp-portrange'] = this.getPortRange('TCP');
-          this.form['udp-portrange'] = this.getPortRange('UDP');
-          this.form['sctp-portrange'] = this.getPortRange('SCTP');
+          this.onProtocolRangesUpdate.emit({value: {
+              'tcp-portrange': this.getPortRange('TCP'),
+              'udp-portrange': this.getPortRange('UDP'),
+              'sctp-portrange': this.getPortRange('SCTP'),
+            }, errors: {}})
         }
       }
     );
@@ -54,6 +64,11 @@ export class TcpProtocalRangeComponent implements AfterViewInit, OnDestroy {
         const dest = `${portRange.destLow}-${portRange.destHigh}`;
         return this.showSourcePort? `${dest}:${portRange.sourceLow}-${portRange.sourceHigh}`: dest}
       ).join(' ')
+  }
+
+  getPortRangeArray(range: string, protocol: Protocol){
+    return range.split(' ').filter(range=> range).map(range => range.split(/[-:]/).map(port => Number(port)))
+      .map(([destLow, destHigh, sourceLow, sourceHigh])=> ({protocol, destLow, destHigh, sourceLow, sourceHigh}))
   }
 
 }

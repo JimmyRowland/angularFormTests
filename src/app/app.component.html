@@ -1,4 +1,25 @@
 <form #protocolForm="ngForm">
-  <app-tcp-protocal-range [form]="form"></app-tcp-protocal-range>
+  <input
+    name="sctp-portrange"
+    [(ngModel)]="form['sctp-portrange']"
+    [hidden]="true"
+    ngModel
+  />
+  <input
+    name="tcp-portrange"
+    [(ngModel)]="form['tcp-portrange']"
+    [hidden]="true"
+    ngModel
+  />
+  <input
+    name="udp-portrange"
+    [(ngModel)]="form['udp-portrange']"
+    [hidden]="true"
+    ngModel
+  />
+  <app-tcp-protocal-range [loaded]="loaded | async" [form]="form" (onProtocolRangesUpdate)="onProtocolRangesUpdate($event)"></app-tcp-protocal-range>
 </form>
+<p>
+  {{formString}}
+</p>
 

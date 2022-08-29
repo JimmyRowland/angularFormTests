@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, OnDestroy, ViewChild } from '@angular/core';
 import { NgForm } from '@angular/forms';
-import { interval, Subscription } from 'rxjs';
+import { interval, map, Subscription, tap } from 'rxjs';
+import { ProtocolService } from 'src/app/protocol.service';
 type Protocol = 'TCP/UDP/SCTP' | 'ICMP' | 'IP';
 
 @Component({
@@ -9,6 +10,8 @@ type Protocol = 'TCP/UDP/SCTP' | 'ICMP' | 'IP';
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements AfterViewInit, OnDestroy {
+  constructor(private protocolService: ProtocolService) {
+  }
 
   @ViewChild('protocolForm') ngForm?: NgForm;
   protocolOptions: ReadonlyArray<{ value: Protocol, label: string }> = [
@@ -24,16 +27,29 @@ export class AppComponent implements AfterViewInit, OnDestroy {
     'sctp-portrange': '',
   }
 
-  sub?: Subscription;
+  subs: Subscription[] = [];
+
+  get formString(){
+    return JSON.stringify(this.form)
+  }
+
+  loaded = this.protocolService.protocol.pipe(map(()=>true))
 
   ngAfterViewInit(): void {
     console.log('ngAfterViewInit')
+    this.subs.push(this.protocolService.protocol.pipe(tap(console.log)).subscribe(form => Object.assign(this.form, form)));
     setTimeout(()=>{
-      this.sub = this.ngForm?.controls['tcp-portrange'].valueChanges.subscribe(console.log);
+      this.subs.push(this.ngForm!.controls['tcp-portrange'].valueChanges.subscribe(console.log))
     })
     // interval().subscribe(()=>console.log(this.ngForm?.value))
   }
   ngOnDestroy(): void {
-    this.sub?.unsubscribe()
+    for(const sub of this.subs){
+      sub.unsubscribe();
+    }
+  }
+
+  onProtocolRangesUpdate(value: {value: {'tcp-portrange': string, 'udp-portrange': string, 'sctp-portrange': string}, errors: any}): void{
+    Object.assign(this.form, value.value);
   }
 }
